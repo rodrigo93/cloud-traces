@@ -45,6 +45,7 @@ import br.com.autonomiccs.cloudTraces.algorithms.deployment.DeploymentHeuristic;
 import br.com.autonomiccs.cloudTraces.algorithms.deployment.SmallestClustersFirstDeploymentHeuristic;
 import br.com.autonomiccs.cloudTraces.algorithms.management.ClusterAdministrationAlgorithm;
 import br.com.autonomiccs.cloudTraces.algorithms.management.ClusterAdministrationAlgorithmEmptyImpl;
+import br.com.autonomiccs.cloudTraces.algorithms.management.ClusterVmsBalancingOrientedBySimilarity;
 import br.com.autonomiccs.cloudTraces.beans.Cloud;
 import br.com.autonomiccs.cloudTraces.beans.Cluster;
 import br.com.autonomiccs.cloudTraces.beans.GoogleJob;
@@ -76,9 +77,9 @@ public class CloudTracesSimulator {
     private static int timeFramePerSimulationIterationInMinutes = 5;
 
     public static void main(String[] args) {
-        validateInputFile(args);
+        //      validateInputFile(args);
 
-        String cloudTracesFile = args[0];
+        String cloudTracesFile = "cloudVmTraces.csv";//args[0];
         Collection<VirtualMachine> virtualMachines = getAllVirtualMachinesFromCloudTraces(cloudTracesFile);
         logger.info(String.format("#VirtualMachines [%d] found on [%s].", virtualMachines.size(), cloudTracesFile));
 
@@ -225,7 +226,7 @@ public class CloudTracesSimulator {
     }
 
     private static ClusterAdministrationAlgorithmEmptyImpl getClusterAdministrationAlgorithms() {
-        return new ClusterAdministrationAlgorithmEmptyImpl();
+        return new ClusterVmsBalancingOrientedBySimilarity();
     }
 
     private static void updateCloudResourceUsageForTime(Cloud cloud, double currentTime) {
