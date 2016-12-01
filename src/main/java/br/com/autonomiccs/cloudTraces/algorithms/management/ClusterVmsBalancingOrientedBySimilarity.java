@@ -26,9 +26,9 @@ public class ClusterVmsBalancingOrientedBySimilarity extends ClusterAdministrati
     private StandardDeviation std = new StandardDeviation(false);
 
     protected static final long NUMBER_OF_BYTES_IN_ONE_MEGA_BYTE = 1024l;
-    private static final String VMS_MEAN = "allocated resources MEAN", VMS_MEDIAN = "allocated resources MEDIAN"; //, VMS_MODE = "allocated resources MODE";
     protected static final String COSINE_SIMILARITY_WITH_HOST_VM_RATIO = "cosineSimilarityWithHostVmRatio";
     protected static final String COSINE_SIMILARITY = "cosineSimilarity";
+    protected static final String COSIZE = "cosize";
 
     private List<Host> originalManagedHostsList;
     private int numberOfVms = 0;
@@ -52,14 +52,19 @@ public class ClusterVmsBalancingOrientedBySimilarity extends ClusterAdministrati
         List<Double> standardDeviations = new ArrayList<>();
         List<Map<VirtualMachine, Host>> maps = new ArrayList<>();
 
+        List<Host> rankedHostsCosineSimilarityMean = cloneListOfHosts(rankedHosts);
+        List<Host> rankedHostsCosineSimilarityMedian = cloneListOfHosts(rankedHosts);
+        maps.add(simulateMapOfMigrations(rankedHostsCosineSimilarityMean, 1, COSINE_SIMILARITY, vmsAllocatedCpuInMhzMean, vmsAllocatedMemoryInMibMean));
+        maps.add(simulateMapOfMigrations(rankedHostsCosineSimilarityMedian, 1, COSINE_SIMILARITY, vmsAllocatedCpuInMhzMedian, vmsAllocatedMemoryInMibMedian));
+        standardDeviations.add(calculateStandarDeviation(rankedHostsCosineSimilarityMean));
+        standardDeviations.add(calculateStandarDeviation(rankedHostsCosineSimilarityMedian));
+
         List<Host> rankedHostsMeanAlpha1 = cloneListOfHosts(rankedHosts);
         List<Host> rankedHostsMeanAlpha2 = cloneListOfHosts(rankedHosts);
         List<Host> rankedHostsMeanAlpha10 = cloneListOfHosts(rankedHosts);
-
-        maps.add(simulateMigrationsAndLog(rankedHostsMeanAlpha1, VMS_MEAN, 1, COSINE_SIMILARITY_WITH_HOST_VM_RATIO, vmsAllocatedCpuInMhzMean, vmsAllocatedMemoryInMibMean));
-        maps.add(simulateMigrationsAndLog(rankedHostsMeanAlpha2, VMS_MEAN, 2, COSINE_SIMILARITY_WITH_HOST_VM_RATIO, vmsAllocatedCpuInMhzMean, vmsAllocatedMemoryInMibMean));
-        maps.add(simulateMigrationsAndLog(rankedHostsMeanAlpha10, VMS_MEAN, 10, COSINE_SIMILARITY_WITH_HOST_VM_RATIO, vmsAllocatedCpuInMhzMean, vmsAllocatedMemoryInMibMean));
-
+        maps.add(simulateMapOfMigrations(rankedHostsMeanAlpha1, 1, COSINE_SIMILARITY_WITH_HOST_VM_RATIO, vmsAllocatedCpuInMhzMean, vmsAllocatedMemoryInMibMean));
+        maps.add(simulateMapOfMigrations(rankedHostsMeanAlpha2, 2, COSINE_SIMILARITY_WITH_HOST_VM_RATIO, vmsAllocatedCpuInMhzMean, vmsAllocatedMemoryInMibMean));
+        maps.add(simulateMapOfMigrations(rankedHostsMeanAlpha10, 10, COSINE_SIMILARITY_WITH_HOST_VM_RATIO, vmsAllocatedCpuInMhzMean, vmsAllocatedMemoryInMibMean));
         standardDeviations.add(calculateStandarDeviation(rankedHostsMeanAlpha1));
         standardDeviations.add(calculateStandarDeviation(rankedHostsMeanAlpha2));
         standardDeviations.add(calculateStandarDeviation(rankedHostsMeanAlpha10));
@@ -67,43 +72,35 @@ public class ClusterVmsBalancingOrientedBySimilarity extends ClusterAdministrati
         List<Host> rankedHostsMedianAlpha1 = cloneListOfHosts(rankedHosts);
         List<Host> rankedHostsMedianAlpha2 = cloneListOfHosts(rankedHosts);
         List<Host> rankedHostsMedianAlpha10 = cloneListOfHosts(rankedHosts);
-
-        maps.add(simulateMigrationsAndLog(rankedHostsMedianAlpha1, VMS_MEDIAN, 1, COSINE_SIMILARITY_WITH_HOST_VM_RATIO, vmsAllocatedCpuInMhzMedian, vmsAllocatedMemoryInMibMedian));
-        maps.add(simulateMigrationsAndLog(rankedHostsMedianAlpha2, VMS_MEDIAN, 2, COSINE_SIMILARITY_WITH_HOST_VM_RATIO, vmsAllocatedCpuInMhzMedian, vmsAllocatedMemoryInMibMedian));
-        maps.add(simulateMigrationsAndLog(rankedHostsMedianAlpha10, VMS_MEDIAN, 10, COSINE_SIMILARITY_WITH_HOST_VM_RATIO, vmsAllocatedCpuInMhzMedian,
+        maps.add(simulateMapOfMigrations(rankedHostsMedianAlpha1, 1, COSINE_SIMILARITY_WITH_HOST_VM_RATIO, vmsAllocatedCpuInMhzMedian, vmsAllocatedMemoryInMibMedian));
+        maps.add(simulateMapOfMigrations(rankedHostsMedianAlpha2, 2, COSINE_SIMILARITY_WITH_HOST_VM_RATIO, vmsAllocatedCpuInMhzMedian, vmsAllocatedMemoryInMibMedian));
+        maps.add(simulateMapOfMigrations(rankedHostsMedianAlpha10, 10, COSINE_SIMILARITY_WITH_HOST_VM_RATIO, vmsAllocatedCpuInMhzMedian,
                 vmsAllocatedMemoryInMibMedian));
-
         standardDeviations.add(calculateStandarDeviation(rankedHostsMedianAlpha1));
         standardDeviations.add(calculateStandarDeviation(rankedHostsMedianAlpha2));
         standardDeviations.add(calculateStandarDeviation(rankedHostsMedianAlpha10));
 
-        List<Host> rankedHostsCosineSimilarityMean = cloneListOfHosts(rankedHosts);
-        List<Host> rankedHostsCosineSimilarityMedian = cloneListOfHosts(rankedHosts);
-        maps.add(simulateMigrationsAndLog(rankedHostsCosineSimilarityMean, VMS_MEAN, 1, COSINE_SIMILARITY, vmsAllocatedCpuInMhzMean, vmsAllocatedMemoryInMibMean));
-        maps.add(simulateMigrationsAndLog(rankedHostsCosineSimilarityMedian, VMS_MEDIAN, 1, COSINE_SIMILARITY, vmsAllocatedCpuInMhzMedian, vmsAllocatedMemoryInMibMedian));
-        standardDeviations.add(calculateStandarDeviation(rankedHostsCosineSimilarityMean));
-        standardDeviations.add(calculateStandarDeviation(rankedHostsCosineSimilarityMedian));
-
-        //        logger.info("Simulation Results:");
-        //        logger.info(String.format("[Std=%f] after simulation with alpha=[%d], VMs profile=[%s], and similarity method=[%s]", standardDeviations.get(0), 1,
-        //                VMS_MEAN, COSINE_SIMILARITY_WITH_HOST_VM_RATIO));
-        //        logger.info(String.format("[Std=%f] after simulation with alpha=[%d], VMs profile=[%s], and similarity method=[%s]", standardDeviations.get(1), 2,
-        //                VMS_MEAN, COSINE_SIMILARITY_WITH_HOST_VM_RATIO));
-        //        logger.info(String.format("[Std=%f] after simulation with alpha=[%d], VMs profile=[%s], and similarity method=[%s]", standardDeviations.get(2), 10,
-        //                VMS_MEAN, COSINE_SIMILARITY_WITH_HOST_VM_RATIO));
-        //        logger.info(String.format("[Std=%f] after simulation with alpha=[%d], VMs profile=[%s], and similarity method=[%s]", standardDeviations.get(3), 1,
-        //                VMS_MEDIAN, COSINE_SIMILARITY_WITH_HOST_VM_RATIO));
-        //        logger.info(String.format("[Std=%f] after simulation with alpha=[%d], VMs profile=[%s], and similarity method=[%s]", standardDeviations.get(4), 2,
-        //                VMS_MEDIAN, COSINE_SIMILARITY_WITH_HOST_VM_RATIO));
-        //        logger.info(String.format("[Std=%f] after simulation with alpha=[%d], VMs profile=[%s], and similarity method=[%s]", standardDeviations.get(5), 10, VMS_MEDIAN,
-        //                COSINE_SIMILARITY_WITH_HOST_VM_RATIO));
-
         int indexOfMinimumStandardDeviation = standardDeviations.indexOf(Collections.min(standardDeviations));
+        // String minimumStdResults = logHeuristicsWithMinimumStandardDeviations(standardDeviations, indexOfMinimumStandardDeviation);
+
         Map<VirtualMachine, Host> map = maps.get(indexOfMinimumStandardDeviation);
         if (map.size() > 0) {
+            // logger.info(minimumStdResults);
             logger.info(String.format("selected map index [%d], number of hosts [%s], number of VMs [%s]", indexOfMinimumStandardDeviation, rankedHosts.size(), numberOfVms));
         }
         return map;
+    }
+
+    private void logHeuristicsWithMinimumStandardDeviations(List<Double> standardDeviations, int indexOfMinimumStandardDeviation) {
+        String minimumStdResults = "MinimumResults=[";
+        for (int i = 0; i < standardDeviations.size(); i++) {
+            if (standardDeviations.get(i) <= standardDeviations.get(indexOfMinimumStandardDeviation)) {
+                minimumStdResults += "1 ";
+            } else {
+                minimumStdResults += "0 ";
+            }
+        }
+        minimumStdResults += "]";
     }
 
     protected double calculateStandarDeviation(List<Host> hosts) {
@@ -123,13 +120,8 @@ public class ClusterVmsBalancingOrientedBySimilarity extends ClusterAdministrati
         }
     }
 
-    protected Map<VirtualMachine, Host> simulateMigrationsAndLog(List<Host> rankedHosts, String type, double alpha, String similarityMethod, long vmsCpuStatistics,
-            long vmsMemoryStatistics) {
-        return simulateMapOfMigrations(rankedHosts, vmsCpuStatistics, vmsMemoryStatistics, 1, similarityMethod);
-    }
-
-    protected Map<VirtualMachine, Host> simulateMapOfMigrations(List<Host> rankedHosts, long vmsCpuInMhzStatistic, long vmsMemoryInMibStatistic, double alpha,
-            String similarityMethod) {
+    protected Map<VirtualMachine, Host> simulateMapOfMigrations(List<Host> rankedHosts, double alpha, String similarityMethod, long vmsCpuInMhzStatistic,
+            long vmsMemoryInMibStatistic) {
         Map<VirtualMachine, Host> mapOfMigrations = new HashMap<>();
         for (int i = rankedHosts.size() - 1; i > 0; i--) {
             Host hostToBeOffloaded = rankedHosts.get(i);
@@ -219,63 +211,8 @@ public class ClusterVmsBalancingOrientedBySimilarity extends ClusterAdministrati
         return sortedVirtualMachines;
     }
 
-    private List<ComputingResourceIdAndScore> calculateSimilarity(Host candidateToReceiveVms, List<VirtualMachine> vms, double alpha, String similarityMethod) {
-        if (similarityMethod.equals(COSINE_SIMILARITY_WITH_HOST_VM_RATIO)) {
-            return calculateSimilaritiesOfVmsWithHost(vms, candidateToReceiveVms, alpha);
-        }
-        if (similarityMethod.equals(COSINE_SIMILARITY)) {
-            return calculateCosineSimilarityOfVmsWithHost(vms, candidateToReceiveVms);
-        }
-        return new ArrayList<>();
-    }
-
-    protected List<ComputingResourceIdAndScore> calculateSimilaritiesOfVmsWithHost(List<VirtualMachine> vms, Host candidateToReceiveVms, double alpha) {
-        List<ComputingResourceIdAndScore> scoredVms = new ArrayList<>();
-        for (VirtualMachine vm : vms) {
-            long vmCpuInMhz = vm.getVmServiceOffering().getCoreSpeed() * vm.getVmServiceOffering().getNumberOfCores();
-            long vmMemoryInMegaByte = vm.getVmServiceOffering().getMemoryInMegaByte();
-            long[] vmConfigurationsVector = { vmCpuInMhz, vmMemoryInMegaByte };
-
-            long candidateToReceiveVmsAvailableCpuInMhz = candidateToReceiveVms.getTotalCpuPowerInMhz() - candidateToReceiveVms.getCpuAllocatedInMhz();
-            long candidateToReceiveVmsAvailableMemoryInMegaByte = candidateToReceiveVms.getTotalMemoryInMib() - candidateToReceiveVms.getMemoryAllocatedInMib();
-            long[] hostAvailableCapacityVector = { candidateToReceiveVmsAvailableCpuInMhz, candidateToReceiveVmsAvailableMemoryInMegaByte };
-
-            double vmScore = cosineSimilarityWithHostVmRatio(alpha, vmConfigurationsVector, hostAvailableCapacityVector);
-            scoredVms.add(new ComputingResourceIdAndScore(vm.getVmId(), vmScore));
-        }
-        return scoredVms;
-    }
-
-    protected List<ComputingResourceIdAndScore> calculateCosineSimilarityOfVmsWithHost(List<VirtualMachine> vms, Host candidateToReceiveVms) {
-        List<ComputingResourceIdAndScore> scoredVms = new ArrayList<>();
-        for (VirtualMachine vm : vms) {
-            long vmCpuInMhz = vm.getVmServiceOffering().getCoreSpeed() * vm.getVmServiceOffering().getNumberOfCores();
-            long vmMemoryInMegaByte = vm.getVmServiceOffering().getMemoryInMegaByte();
-            long[] vmConfigurationsVector = { vmCpuInMhz, vmMemoryInMegaByte };
-
-            long candidateToReceiveVmsAvailableCpuInMhz = candidateToReceiveVms.getTotalCpuPowerInMhz() - candidateToReceiveVms.getCpuAllocatedInMhz();
-            long candidateToReceiveVmsAvailableMemoryInMegaByte = candidateToReceiveVms.getTotalMemoryInMib() - candidateToReceiveVms.getMemoryAllocatedInMib();
-            long[] hostAvailableCapacityVector = { candidateToReceiveVmsAvailableCpuInMhz, candidateToReceiveVmsAvailableMemoryInMegaByte };
-
-            double vmScore = cosineSimilarity(vmConfigurationsVector, hostAvailableCapacityVector);
-            scoredVms.add(new ComputingResourceIdAndScore(vm.getVmId(), vmScore));
-        }
-        return scoredVms;
-    }
-
-    protected double cosineSimilarityWithHostVmRatio(double alfa, long[] vmResourcesVector, long[] hostResourcesVector) {
-        double productOfVmResourcesVector = 1;
-        double productOfHostResourcesVector = 1;
-        for (int i = 0; i < vmResourcesVector.length; i++) {
-            productOfVmResourcesVector = productOfVmResourcesVector * vmResourcesVector[i];
-            productOfHostResourcesVector = productOfHostResourcesVector * hostResourcesVector[i];
-        }
-        double cos = cosineSimilarity(vmResourcesVector, hostResourcesVector);
-        return Math.pow(cos, alfa) * (productOfHostResourcesVector / productOfVmResourcesVector);
-    }
-
     protected double cosineSimilarity(long[] vmResourcesVector, long[] hostResourcesVector) {
-        long sumOfProducts = 0;
+        double sumOfProducts = 0;
         long sumOfVmResourcesVector = 0;
         long sumOfHostResourcesVector = 0;
         for (int i = 0; i < vmResourcesVector.length; i++) {
@@ -292,6 +229,51 @@ public class ClusterVmsBalancingOrientedBySimilarity extends ClusterAdministrati
             return 0;
         }
         return sumOfProducts / (Math.sqrt(sumOfVmResourcesVector) * Math.sqrt(sumOfHostResourcesVector));
+    }
+
+    protected double calculateCosize(double alfa, long[] vmResourcesVector, long[] hostResourcesVector) {
+        double productOfVmResourcesVector = 1;
+        for (int i = 0; i < vmResourcesVector.length; i++) {
+            productOfVmResourcesVector = productOfVmResourcesVector * vmResourcesVector[i];
+        }
+        double cos = cosineSimilarity(vmResourcesVector, hostResourcesVector);
+        return Math.pow(cos, alfa) * productOfVmResourcesVector;
+    }
+
+    protected double calculateCosineSimilarityWithHostVmRatio(double alfa, long[] vmResourcesVector, long[] hostResourcesVector) {
+        double productOfVmResourcesVector = 1;
+        double productOfHostResourcesVector = 1;
+        for (int i = 0; i < vmResourcesVector.length; i++) {
+            productOfVmResourcesVector = productOfVmResourcesVector * vmResourcesVector[i];
+            productOfHostResourcesVector = productOfHostResourcesVector * hostResourcesVector[i];
+        }
+        double cos = cosineSimilarity(vmResourcesVector, hostResourcesVector);
+        return Math.pow(cos, alfa) * (productOfHostResourcesVector / productOfVmResourcesVector);
+    }
+
+    private List<ComputingResourceIdAndScore> calculateSimilarity(Host candidateToReceiveVms, List<VirtualMachine> vms, double alpha, String similarityMethod) {
+        List<ComputingResourceIdAndScore> scoredVms = new ArrayList<>();
+        for (VirtualMachine vm : vms) {
+            long vmCpuInMhz = vm.getVmServiceOffering().getCoreSpeed() * vm.getVmServiceOffering().getNumberOfCores();
+            long vmMemoryInMegaByte = vm.getVmServiceOffering().getMemoryInMegaByte();
+            long[] vmConfigurationsVector = { vmCpuInMhz, vmMemoryInMegaByte };
+
+            long candidateToReceiveVmsAvailableCpuInMhz = candidateToReceiveVms.getTotalCpuPowerInMhz() - candidateToReceiveVms.getCpuAllocatedInMhz();
+            long candidateToReceiveVmsAvailableMemoryInMegaByte = candidateToReceiveVms.getTotalMemoryInMib() - candidateToReceiveVms.getMemoryAllocatedInMib();
+            long[] hostAvailableCapacityVector = { candidateToReceiveVmsAvailableCpuInMhz, candidateToReceiveVmsAvailableMemoryInMegaByte };
+
+            if (similarityMethod.equals(COSINE_SIMILARITY)) {
+                double vmScore = cosineSimilarity(vmConfigurationsVector, hostAvailableCapacityVector);
+                scoredVms.add(new ComputingResourceIdAndScore(vm.getVmId(), vmScore));
+            } else if (similarityMethod.equals(COSINE_SIMILARITY_WITH_HOST_VM_RATIO)) {
+                double vmScore = calculateCosineSimilarityWithHostVmRatio(alpha, vmConfigurationsVector, hostAvailableCapacityVector);
+                scoredVms.add(new ComputingResourceIdAndScore(vm.getVmId(), vmScore));
+            } else if (similarityMethod.equals(COSIZE)) {
+                double vmScore = calculateCosize(alpha, vmConfigurationsVector, hostAvailableCapacityVector);
+                scoredVms.add(new ComputingResourceIdAndScore(vm.getVmId(), vmScore));
+            }
+        }
+        return scoredVms;
     }
 
     protected void calculateClusterUsage(List<Host> rankedHosts) {

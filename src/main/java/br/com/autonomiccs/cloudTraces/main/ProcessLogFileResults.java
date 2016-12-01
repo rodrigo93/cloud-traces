@@ -40,22 +40,48 @@ public class ProcessLogFileResults {
     private final static String STRING_BEFORE_NUMBER_OF_MIGRATIONS = "#migrations [";
     private final static Pattern PATTERN_MIGRATION = Pattern.compile(Pattern.quote(STRING_BEFORE_NUMBER_OF_MIGRATIONS) + "(.*?)" + Pattern.quote("]"));
 
-    private final static String FIRST_LINE = "Migrations CpuStdBefore CpuStdAfter MemoryStdBefore MemoryStdAfter ProcessingTime NumberOfHosts NumberOfVms SelectedHeuristic";
+    private final static Pattern PATTERN_MEMORY_STD = Pattern.compile(Pattern.quote("] memory STD [") + "(.*?)" + Pattern.quote("Gib]"));
+    private final static Pattern PATTERN_CLUSTER_ID = Pattern.compile(Pattern.quote("Cluster [cluster-") + "(.*?)" + Pattern.quote("] memory STD "));
+
+    private static double wightedMemoryStdSum = 0;
+    private static double weightedCpuStd = 0;
+    private static long cloudMemory = 0;
+    private static long cloudCpu = 0;
+    private static int numberOfClusters = 0;
+    private static List<Double> clustersMemoryStd = new ArrayList<>();
+    private static List<Double> clustersCpuStd = new ArrayList<>();
+
+    private static List<Double> clustersMemory = new ArrayList<>();
+    private static List<Double> clustersCpu = new ArrayList<>();
 
     public static void main(String[] args) throws IOException {
-        //        validateInputFile(args);
+        validateInputFile(args);
 
-        String simulatedResultsLogFile = "cloud-traces.log";
+        //        String simulatedResultsLogFile = "cloud-traces.log";
+        String simulatedResultsLogFile = args[0];
 
         PrintWriter outputFile = new PrintWriter("simulationResultsToAnalyse.txt");
-        outputFile.println(FIRST_LINE);
-
         BufferedReader bufferedReader = new BufferedReader(new FileReader(simulatedResultsLogFile));
 
         List<String> linesToWrite = new ArrayList<>();
+
+        mainLog(bufferedReader, linesToWrite);
+        //        bestResults(bufferedReader, linesToWrite);
+        //        allocatedLog(bufferedReader, linesToWrite);
+        //        standardDeviationsLog(bufferedReader, linesToWrite);
+
+        writeLines(outputFile, linesToWrite);
+
+        bufferedReader.close();
+        outputFile.close();
+        System.out.println("Finished!");
+    }
+
+    private static void mainLog(BufferedReader bufferedReader, List<String> linesToWrite) throws IOException {
         String lineToRead;
         String processingTime = "", migrations = "", cpuBefore = "", cpuAfter = "", memoryBefore = "", memoryAfter = "", numberOfHosts = "", numberOfVms = "",
                 selectedHeuristic = "";
+        linesToWrite.add("Migrations CpuStdBefore CpuStdAfter MemoryStdBefore MemoryStdAfter ProcessingTime NumberOfHosts NumberOfVms SelectedHeuristic");
         while ((lineToRead = bufferedReader.readLine()) != null) {
             Matcher matcherMigration = PATTERN_MIGRATION.matcher(lineToRead);
             Matcher matcherCpuStd = PATTERN_CPU_STD.matcher(lineToRead);
@@ -98,12 +124,127 @@ public class ProcessLogFileResults {
                         selectedHeuristic);
             }
         }
+    }
 
-        writeLines(outputFile, linesToWrite);
+    private static void allocatedLog(BufferedReader bufferedReader, List<String> linesToWrite) throws IOException {
+        String lineToRead;
+        String time = "90000.00";
+        String clusters = "1";
+        String currentTime;
+        linesToWrite.add("TIME CPU_STD_MEAN MEMORY_STD_MEAN");
 
-        bufferedReader.close();
-        outputFile.close();
-        System.out.println("Finished!");
+        while ((lineToRead = bufferedReader.readLine()) != null) {
+            Matcher matcherCpuStd = PATTERN_CPU_STD.matcher(lineToRead);
+            Matcher matcherMemoryStd = PATTERN_MEMORY_STD.matcher(lineToRead);
+            Matcher matcherClusterId = PATTERN_CLUSTER_ID.matcher(lineToRead);
+
+            Pattern PATTERN_TIME = Pattern.compile(Pattern.quote("time [") + "(.*?)" + Pattern.quote("]"));
+            Matcher matcherTime = PATTERN_TIME.matcher(lineToRead);
+
+            Pattern PATTERN_CLOUD_MEMORY = Pattern.compile(Pattern.quote("Cloud configuration: Cloud id [Google data traces], total memory [") + "(.*?)" + Pattern.quote("MB]"));
+            Pattern PATTERN_CLOUD_CPU = Pattern.compile(Pattern.quote("], total cpu [") + "(.*?)" + Pattern.quote("Mhz]"));
+            Pattern PATTERN_CLUSTER_CONFIGURATION = Pattern.compile(Pattern.quote("Cluster configuration at time "));
+            Pattern CLUSTER_MEMORY = Pattern.compile(Pattern.quote("total memory [") + "(.*?)" + Pattern.quote("MB]"));
+            Pattern CLUSTER_CPU = Pattern.compile(Pattern.quote("total cpu [") + "(.*?)" + Pattern.quote("Mhz]"));
+
+            Matcher matcherCloudMemory = PATTERN_CLOUD_MEMORY.matcher(lineToRead);
+            Matcher matcherCloudCpu = PATTERN_CLOUD_CPU.matcher(lineToRead);
+            Matcher matcherClusterConfiguration = PATTERN_CLUSTER_CONFIGURATION.matcher(lineToRead);
+            Matcher matcherClusterCpu = CLUSTER_MEMORY.matcher(lineToRead);
+            Matcher matcherClusterMemory = CLUSTER_CPU.matcher(lineToRead);
+
+            if (matcherCloudMemory.find()) {
+                cloudMemory = Long.parseLong(matcherCloudMemory.group(1));
+                matcherCloudCpu.find();
+                cloudCpu = Long.parseLong(matcherCloudCpu.group(1));
+            }
+
+            if (matcherClusterConfiguration.find()) {
+                matcherClusterCpu.find();
+                matcherClusterMemory.find();
+
+                clustersCpu.add(Double.parseDouble(matcherClusterCpu.group(1)));
+                clustersMemory.add(Double.parseDouble(matcherClusterMemory.group(1)));
+            }
+
+            matcherTime.find();
+            if (matcherClusterId.find()) {
+                currentTime = matcherTime.group(1);
+                currentTime = currentTime.replace(",", ".");
+                matcherMemoryStd.find();
+                matcherCpuStd.find();
+                if (time.equals(currentTime)) {
+                    addClusterMemoryAndCpuStd(clusters, matcherCpuStd, matcherMemoryStd, matcherClusterId);
+                } else {
+                    for(int i = 0; i < numberOfClusters; i++) {
+                        weightedCpuStd += (clustersCpuStd.get(i) * (clustersCpu.get(i) / cloudCpu));
+                        wightedMemoryStdSum += (clustersMemoryStd.get(i) * (clustersMemory.get(i) / cloudMemory));
+                    }
+                    linesToWrite.add(String.format("%s %s %s", time, weightedCpuStd / numberOfClusters, wightedMemoryStdSum / numberOfClusters));
+
+                    weightedCpuStd = 0;
+                    wightedMemoryStdSum = 0;
+                    numberOfClusters = 0;
+                    clustersMemoryStd = new ArrayList<>();
+                    clustersCpuStd = new ArrayList<>();
+                    clustersMemory = new ArrayList<>();
+                    clustersCpu = new ArrayList<>();
+
+                    time = currentTime;
+                    addClusterMemoryAndCpuStd(clusters, matcherCpuStd, matcherMemoryStd, matcherClusterId);
+                }
+            }
+        }
+    }
+
+    private static void addClusterMemoryAndCpuStd(String clusters, Matcher matcherCpuStd, Matcher matcherMemoryStd,
+            Matcher matcherClusterId) {
+        String memoryString = matcherMemoryStd.group(1);
+        memoryString = memoryString.replace(",", ".");
+        wightedMemoryStdSum += Double.valueOf(memoryString);
+
+        String cpuString = matcherCpuStd.group(1);
+        cpuString = cpuString.replace(",", ".");
+        weightedCpuStd += Double.valueOf(cpuString);
+
+        clustersMemoryStd.add(Double.valueOf(memoryString));
+        clustersCpuStd.add(Double.valueOf(cpuString));
+
+        clusters = matcherClusterId.group(1);
+        numberOfClusters = Integer.valueOf(clusters);
+    }
+
+    private static void bestResults(BufferedReader bufferedReader, List<String> linesToWrite) throws IOException {
+        String lineToRead;
+        Pattern PATTERN_BEST_RESULTS_COUNT = Pattern.compile(Pattern.quote("MinimumResults=[") + "(.*?)" + Pattern.quote("]"));
+
+        linesToWrite.add(
+                "COSINE_MEAN COSINE_MEDIAN MEAN_ALPHA1 MEAN_ALPHA2 MEAN_ALPHA10 MEDIAN_ALPHA1 MEDIAN_ALPHA2 MEDIAN_ALPHA10");
+
+        while ((lineToRead = bufferedReader.readLine()) != null) {
+            Matcher matcherBestResults = PATTERN_BEST_RESULTS_COUNT.matcher(lineToRead);
+
+            if (matcherBestResults.find()) {
+                String bestRestults = matcherBestResults.group(1);
+                linesToWrite.add(bestRestults);
+            }
+        }
+    }
+
+    private static void standardDeviationsLog(BufferedReader bufferedReader, List<String> linesToWrite) throws IOException {
+        String lineToRead;
+        Pattern PATTERN_STANDARD_DEVIATIONS = Pattern.compile(Pattern.quote("StandardDeviations=[") + "(.*?)" + Pattern.quote("]"));
+
+        linesToWrite.add("COSINE_MEAN COSINE_MEDIAN MEAN_ALPHA1 MEAN_ALPHA2 MEAN_ALPHA10 MEDIAN_ALPHA1 MEDIAN_ALPHA2 MEDIAN_ALPHA10");
+
+        while ((lineToRead = bufferedReader.readLine()) != null) {
+            Matcher matcherStandardDeviations = PATTERN_STANDARD_DEVIATIONS.matcher(lineToRead);
+
+            if (matcherStandardDeviations.find()) {
+                String bestRestults = matcherStandardDeviations.group(1);
+                linesToWrite.add(bestRestults);
+            }
+        }
     }
 
     private static void addLineToListOfLinesToWrite(List<String> linesToWrite, String migrations, String cpuBefore, String cpuAfter, String memoryBefore, String memoryAfter,

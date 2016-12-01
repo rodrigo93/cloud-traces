@@ -77,9 +77,9 @@ public class CloudTracesSimulator {
     private static int timeFramePerSimulationIterationInMinutes = 5;
 
     public static void main(String[] args) {
-        //      validateInputFile(args);
+        validateInputFile(args);
 
-        String cloudTracesFile = "cloudVmTraces.csv";//args[0];
+        String cloudTracesFile = args[0];
         Collection<VirtualMachine> virtualMachines = getAllVirtualMachinesFromCloudTraces(cloudTracesFile);
         logger.info(String.format("#VirtualMachines [%d] found on [%s].", virtualMachines.size(), cloudTracesFile));
 
@@ -227,6 +227,7 @@ public class CloudTracesSimulator {
 
     private static ClusterAdministrationAlgorithmEmptyImpl getClusterAdministrationAlgorithms() {
         return new ClusterVmsBalancingOrientedBySimilarity();
+        //        return new ClusterAdministrationAlgorithmEmptyImpl();
     }
 
     private static void updateCloudResourceUsageForTime(Cloud cloud, double currentTime) {
@@ -489,16 +490,17 @@ public class CloudTracesSimulator {
     }
 
     private static double getTimeUnitPerLoopIteration(Integer firstTimeInTimeUnitOfUsedCloudData, Integer lastTimeInTimeUnitOfUserCloudData) {
-        int totalTimeUnits = lastTimeInTimeUnitOfUserCloudData - firstTimeInTimeUnitOfUsedCloudData;
+        //        int totalTimeUnits = lastTimeInTimeUnitOfUserCloudData - firstTimeInTimeUnitOfUsedCloudData;
         logger.info("Time elapsed every iteration: " + timeFramePerSimulationIterationInMinutes + " minutes");
-        return (timeFramePerSimulationIterationInMinutes * totalTimeUnits) / (monitoredIntervalInMinutes * 1d);
+        //        return (timeFramePerSimulationIterationInMinutes * totalTimeUnits) / (monitoredIntervalInMinutes * 1d);
+        return timeFramePerSimulationIterationInMinutes * 60;
     }
 
     private static Cloud createCloudEnvirtonmentToStartsimulation() {
         Cloud cloud = new Cloud("Google data traces");
         cloud.getClusters().addAll(createClustersMediumSizeHosts(10));
-        cloud.getClusters().addAll(createClustersLargeSizeHosts(3));
-        cloud.getClusters().addAll(createClustersWithEnourmousHosts(3));
+        cloud.getClusters().addAll(createClustersLargeSizeHosts(10));
+        cloud.getClusters().addAll(createClustersWithEnourmousHosts(4));
 
         long totalMemory = 0;
         long totalCpu = 0;
