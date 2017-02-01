@@ -77,9 +77,11 @@ public class CloudTracesSimulator {
     private static int timeFramePerSimulationIterationInMinutes = 5;
 
     public static void main(String[] args) {
-        validateInputFile(args);
+        //        validateInputFile(args);
 
-        String cloudTracesFile = args[0];
+        //        String cloudTracesFile = args[0];
+        String cloudTracesFile = "cloudVmTraces.csv";
+
         Collection<VirtualMachine> virtualMachines = getAllVirtualMachinesFromCloudTraces(cloudTracesFile);
         logger.info(String.format("#VirtualMachines [%d] found on [%s].", virtualMachines.size(), cloudTracesFile));
 
@@ -498,9 +500,10 @@ public class CloudTracesSimulator {
 
     private static Cloud createCloudEnvirtonmentToStartsimulation() {
         Cloud cloud = new Cloud("Google data traces");
-        cloud.getClusters().addAll(createClustersMediumSizeHosts(10));
-        cloud.getClusters().addAll(createClustersLargeSizeHosts(10));
-        cloud.getClusters().addAll(createClustersWithEnourmousHosts(4));
+        //        cloud.getClusters().addAll(createClustersMediumSizeHosts(10));
+        //        cloud.getClusters().addAll(createClustersLargeSizeHosts(10));
+        //        cloud.getClusters().addAll(createClustersLargeSizeHosts(4));
+        cloud.getClusters().addAll(createClustersWithEnourmousHosts(5));
 
         long totalMemory = 0;
         long totalCpu = 0;

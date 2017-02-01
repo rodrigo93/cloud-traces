@@ -55,19 +55,19 @@ public class ProcessLogFileResults {
     private static List<Double> clustersCpu = new ArrayList<>();
 
     public static void main(String[] args) throws IOException {
-        validateInputFile(args);
+        //        validateInputFile(args);
 
-        //        String simulatedResultsLogFile = "cloud-traces.log";
-        String simulatedResultsLogFile = args[0];
+        String simulatedResultsLogFile = "cloud-traces.log";
+        //        String simulatedResultsLogFile = args[0];
 
         PrintWriter outputFile = new PrintWriter("simulationResultsToAnalyse.txt");
         BufferedReader bufferedReader = new BufferedReader(new FileReader(simulatedResultsLogFile));
 
         List<String> linesToWrite = new ArrayList<>();
 
-        mainLog(bufferedReader, linesToWrite);
+        //        mainLog(bufferedReader, linesToWrite);
         //        bestResults(bufferedReader, linesToWrite);
-        //        allocatedLog(bufferedReader, linesToWrite);
+        allocatedLog(bufferedReader, linesToWrite);
         //        standardDeviationsLog(bufferedReader, linesToWrite);
 
         writeLines(outputFile, linesToWrite);
