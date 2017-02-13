@@ -76,11 +76,18 @@ public class CloudTracesSimulator {
      */
     private static int timeFramePerSimulationIterationInMinutes = 5;
 
-    public static void main(String[] args) {
-        //        validateInputFile(args);
+    private static String algorithmName;
 
-        //        String cloudTracesFile = args[0];
-        String cloudTracesFile = "cloudVmTraces.csv";
+    public static void main(String[] args) {
+        validateInputFile(args);
+
+        String cloudTracesFile = args[0];
+
+        try {
+            algorithmName = args[1];
+        } catch (ArrayIndexOutOfBoundsException e) {
+            algorithmName = "";
+        }
 
         Collection<VirtualMachine> virtualMachines = getAllVirtualMachinesFromCloudTraces(cloudTracesFile);
         logger.info(String.format("#VirtualMachines [%d] found on [%s].", virtualMachines.size(), cloudTracesFile));
@@ -228,8 +235,15 @@ public class CloudTracesSimulator {
     }
 
     private static ClusterAdministrationAlgorithmEmptyImpl getClusterAdministrationAlgorithms() {
-        return new ClusterVmsBalancingOrientedBySimilarity();
-        //        return new ClusterAdministrationAlgorithmEmptyImpl();
+        if (algorithmName.isEmpty()) {
+            return new ClusterVmsBalancingOrientedBySimilarity();
+        } else {
+            if (algorithmName.equals("empty")) {
+                return new ClusterAdministrationAlgorithmEmptyImpl();
+            } else {
+                return new ClusterVmsBalancingOrientedBySimilarity();
+            }
+        }
     }
 
     private static void updateCloudResourceUsageForTime(Cloud cloud, double currentTime) {
@@ -492,18 +506,14 @@ public class CloudTracesSimulator {
     }
 
     private static double getTimeUnitPerLoopIteration(Integer firstTimeInTimeUnitOfUsedCloudData, Integer lastTimeInTimeUnitOfUserCloudData) {
-        //        int totalTimeUnits = lastTimeInTimeUnitOfUserCloudData - firstTimeInTimeUnitOfUsedCloudData;
         logger.info("Time elapsed every iteration: " + timeFramePerSimulationIterationInMinutes + " minutes");
-        //        return (timeFramePerSimulationIterationInMinutes * totalTimeUnits) / (monitoredIntervalInMinutes * 1d);
         return timeFramePerSimulationIterationInMinutes * 60;
     }
 
     private static Cloud createCloudEnvirtonmentToStartsimulation() {
         Cloud cloud = new Cloud("Google data traces");
-        //        cloud.getClusters().addAll(createClustersMediumSizeHosts(10));
-        //        cloud.getClusters().addAll(createClustersLargeSizeHosts(10));
-        //        cloud.getClusters().addAll(createClustersLargeSizeHosts(4));
-        cloud.getClusters().addAll(createClustersWithEnourmousHosts(5));
+        cloud.getClusters().addAll(createClustersLargeSizeHosts(1));
+        cloud.getClusters().addAll(createClustersWithEnourmousHosts(4));
 
         long totalMemory = 0;
         long totalCpu = 0;
@@ -674,9 +684,6 @@ public class CloudTracesSimulator {
     }
 
     private static void validateInputFile(String[] args) {
-        if (args.length != 1) {
-            throw new GoogleTracesToCloudTracesException("You should inform the full qualified path to the cloud traces data set.");
-        }
         File file = new File(args[0]);
         if (!file.exists()) {
             throw new GoogleTracesToCloudTracesException(String.format("File [%s] does not exist.", args[0]));

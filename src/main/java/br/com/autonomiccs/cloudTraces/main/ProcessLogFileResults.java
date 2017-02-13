@@ -55,20 +55,33 @@ public class ProcessLogFileResults {
     private static List<Double> clustersCpu = new ArrayList<>();
 
     public static void main(String[] args) throws IOException {
-        //        validateInputFile(args);
+        validateInputFile(args);
 
-        String simulatedResultsLogFile = "cloud-traces.log";
-        //        String simulatedResultsLogFile = args[0];
+        String simulatedResultsLogFile = args[0];
 
         PrintWriter outputFile = new PrintWriter("simulationResultsToAnalyse.txt");
         BufferedReader bufferedReader = new BufferedReader(new FileReader(simulatedResultsLogFile));
 
         List<String> linesToWrite = new ArrayList<>();
 
-        //        mainLog(bufferedReader, linesToWrite);
-        //        bestResults(bufferedReader, linesToWrite);
-        allocatedLog(bufferedReader, linesToWrite);
-        //        standardDeviationsLog(bufferedReader, linesToWrite);
+        String logType;
+        try {
+            logType = args[1];
+        } catch (ArrayIndexOutOfBoundsException e) {
+            logType = "";
+        }
+
+        if (!logType.isEmpty()) {
+            if (logType.equals("mainLog")) {
+                mainLog(bufferedReader, linesToWrite);
+            } else if(logType.equals("bestResults")) {
+                bestResults(bufferedReader, linesToWrite);
+            } else {
+                allocatedLog(bufferedReader, linesToWrite);
+            }
+        } else {
+            allocatedLog(bufferedReader, linesToWrite);
+        }
 
         writeLines(outputFile, linesToWrite);
 
@@ -231,22 +244,6 @@ public class ProcessLogFileResults {
         }
     }
 
-    private static void standardDeviationsLog(BufferedReader bufferedReader, List<String> linesToWrite) throws IOException {
-        String lineToRead;
-        Pattern PATTERN_STANDARD_DEVIATIONS = Pattern.compile(Pattern.quote("StandardDeviations=[") + "(.*?)" + Pattern.quote("]"));
-
-        linesToWrite.add("COSINE_MEAN COSINE_MEDIAN MEAN_ALPHA1 MEAN_ALPHA2 MEAN_ALPHA10 MEDIAN_ALPHA1 MEDIAN_ALPHA2 MEDIAN_ALPHA10");
-
-        while ((lineToRead = bufferedReader.readLine()) != null) {
-            Matcher matcherStandardDeviations = PATTERN_STANDARD_DEVIATIONS.matcher(lineToRead);
-
-            if (matcherStandardDeviations.find()) {
-                String bestRestults = matcherStandardDeviations.group(1);
-                linesToWrite.add(bestRestults);
-            }
-        }
-    }
-
     private static void addLineToListOfLinesToWrite(List<String> linesToWrite, String migrations, String cpuBefore, String cpuAfter, String memoryBefore, String memoryAfter,
             String processingTime, String numberOfHosts, String numberOfVms, String selectedHeuristic) {
         if (!migrations.equals("") && !cpuBefore.equals("") && !cpuAfter.equals("") && !memoryBefore.equals("") && !memoryAfter.equals("")) {
@@ -265,9 +262,6 @@ public class ProcessLogFileResults {
     }
 
     private static void validateInputFile(String[] args) {
-        if (args.length != 1) {
-            throw new GoogleTracesToCloudTracesException("You should inform the full qualified path to the cloud traces data set.");
-        }
         File file = new File(args[0]);
         if (!file.exists()) {
             throw new GoogleTracesToCloudTracesException(String.format("File [%s] does not exist.", args[0]));

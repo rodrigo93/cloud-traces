@@ -29,6 +29,7 @@ public class ClusterVmsBalancingOrientedBySimilarity extends ClusterAdministrati
     protected static final String COSINE_SIMILARITY_WITH_HOST_VM_RATIO = "cosineSimilarityWithHostVmRatio";
     protected static final String COSINE_SIMILARITY = "cosineSimilarity";
     protected static final String COSIZE = "cosize";
+    private static final boolean LOG_HEURISTICS_WITH_MINIMUM_STANDARD_DEVIATIONS = false;
 
     private List<Host> originalManagedHostsList;
     private int numberOfVms = 0;
@@ -51,6 +52,7 @@ public class ClusterVmsBalancingOrientedBySimilarity extends ClusterAdministrati
         calculateClusterStatistics(rankedHosts);
         List<Double> standardDeviations = new ArrayList<>();
         List<Map<VirtualMachine, Host>> maps = new ArrayList<>();
+        Map<VirtualMachine, Host> map = new HashMap<>();
 
         List<Host> rankedHostsCosineSimilarityMean = cloneListOfHosts(rankedHosts);
         List<Host> rankedHostsCosineSimilarityMedian = cloneListOfHosts(rankedHosts);
@@ -74,24 +76,28 @@ public class ClusterVmsBalancingOrientedBySimilarity extends ClusterAdministrati
         List<Host> rankedHostsMedianAlpha10 = cloneListOfHosts(rankedHosts);
         maps.add(simulateMapOfMigrations(rankedHostsMedianAlpha1, 1, COSINE_SIMILARITY_WITH_HOST_VM_RATIO, vmsAllocatedCpuInMhzMedian, vmsAllocatedMemoryInMibMedian));
         maps.add(simulateMapOfMigrations(rankedHostsMedianAlpha2, 2, COSINE_SIMILARITY_WITH_HOST_VM_RATIO, vmsAllocatedCpuInMhzMedian, vmsAllocatedMemoryInMibMedian));
-        maps.add(simulateMapOfMigrations(rankedHostsMedianAlpha10, 10, COSINE_SIMILARITY_WITH_HOST_VM_RATIO, vmsAllocatedCpuInMhzMedian,
-                vmsAllocatedMemoryInMibMedian));
+        maps.add(simulateMapOfMigrations(rankedHostsMedianAlpha10, 10, COSINE_SIMILARITY_WITH_HOST_VM_RATIO, vmsAllocatedCpuInMhzMedian, vmsAllocatedMemoryInMibMedian));
         standardDeviations.add(calculateStandarDeviation(rankedHostsMedianAlpha1));
         standardDeviations.add(calculateStandarDeviation(rankedHostsMedianAlpha2));
         standardDeviations.add(calculateStandarDeviation(rankedHostsMedianAlpha10));
 
-        int indexOfMinimumStandardDeviation = standardDeviations.indexOf(Collections.min(standardDeviations));
-        // String minimumStdResults = logHeuristicsWithMinimumStandardDeviations(standardDeviations, indexOfMinimumStandardDeviation);
+        if (LOG_HEURISTICS_WITH_MINIMUM_STANDARD_DEVIATIONS) {
+            int indexOfMinimumStandardDeviation = standardDeviations.indexOf(Collections.min(standardDeviations));
+            String minimumStdResults = logHeuristicsWithMinimumStandardDeviations(standardDeviations, indexOfMinimumStandardDeviation);
 
-        Map<VirtualMachine, Host> map = maps.get(indexOfMinimumStandardDeviation);
-        if (map.size() > 0) {
-            // logger.info(minimumStdResults);
-            logger.info(String.format("selected map index [%d], number of hosts [%s], number of VMs [%s]", indexOfMinimumStandardDeviation, rankedHosts.size(), numberOfVms));
+            map = maps.get(indexOfMinimumStandardDeviation);
+            if (map.size() > 0) {
+                logger.info(minimumStdResults);
+                logger.info(String.format("selected map index [%d], number of hosts [%s], number of VMs [%s]", indexOfMinimumStandardDeviation, rankedHosts.size(), numberOfVms));
+            }
+        } else {
+            int indexOfMinimumStandardDeviation = standardDeviations.indexOf(Collections.min(standardDeviations));
+            map = maps.get(indexOfMinimumStandardDeviation);
         }
         return map;
     }
 
-    private void logHeuristicsWithMinimumStandardDeviations(List<Double> standardDeviations, int indexOfMinimumStandardDeviation) {
+    private String logHeuristicsWithMinimumStandardDeviations(List<Double> standardDeviations, int indexOfMinimumStandardDeviation) {
         String minimumStdResults = "MinimumResults=[";
         for (int i = 0; i < standardDeviations.size(); i++) {
             if (standardDeviations.get(i) <= standardDeviations.get(indexOfMinimumStandardDeviation)) {
@@ -101,6 +107,7 @@ public class ClusterVmsBalancingOrientedBySimilarity extends ClusterAdministrati
             }
         }
         minimumStdResults += "]";
+        return minimumStdResults;
     }
 
     protected double calculateStandarDeviation(List<Host> hosts) {
