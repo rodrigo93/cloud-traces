@@ -97,4 +97,16 @@ public class Host extends ComputingResource {
         clone.virtualMachines = new HashSet<>(virtualMachines);
         return clone;
     }
+
+//    public long getAverageRAMusage(){
+//    	long vmsRAMusage = 0;
+//    	
+//    	for (VirtualMachine vm : virtualMachines) {
+//    		vmsRAMusage = vmsRAMusage + vm.getVmServiceOffering().getMemoryInMegaByte();
+//		}
+//    	
+//    	vmsRAMusage = vmsRAMusage / virtualMachines.size();
+//    	
+//    	return vmsRAMusage;
+//    }
 }

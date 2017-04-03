@@ -47,4 +47,18 @@ public class Cluster extends ComputingResource {
         clone.hosts = new ArrayList<>(this.hosts);
         return clone;
     }
+    
+    public double getAverageRAMusage() {
+    	double hostsRAMusage = getMemoryUsedInMib() / hosts.size();
+    	
+//		for (Host host : hosts) {
+//			for (VirtualMachine vm : host.getVirtualMachines()) {
+//				hostsRAMusage = hostsRAMusage + vm.getVmServiceOffering().getMemoryInMegaByte();
+//			}
+//		}
+		
+//		hostsRAMusage = hostsRAMusage / hosts.size();
+		
+		return hostsRAMusage;
+	}
 }
