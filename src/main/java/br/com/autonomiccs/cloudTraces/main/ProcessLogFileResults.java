@@ -55,9 +55,9 @@ public class ProcessLogFileResults {
     private static List<Double> clustersCpu = new ArrayList<>();
 
     public static void main(String[] args) throws IOException {
-        validateInputFile(args);
+        //validateInputFile(args);
 
-        String simulatedResultsLogFile = args[0];
+        String simulatedResultsLogFile = "cloud-traces.log";
 
         PrintWriter outputFile = new PrintWriter("simulationResultsToAnalyse.txt");
         BufferedReader bufferedReader = new BufferedReader(new FileReader(simulatedResultsLogFile));
@@ -66,7 +66,7 @@ public class ProcessLogFileResults {
 
         String logType;
         try {
-            logType = args[1];
+            logType = "bestResults";
         } catch (ArrayIndexOutOfBoundsException e) {
             logType = "";
         }

@@ -46,6 +46,7 @@ import br.com.autonomiccs.cloudTraces.algorithms.deployment.SmallestClustersFirs
 import br.com.autonomiccs.cloudTraces.algorithms.management.ClusterAdministrationAlgorithm;
 import br.com.autonomiccs.cloudTraces.algorithms.management.ClusterAdministrationAlgorithmEmptyImpl;
 import br.com.autonomiccs.cloudTraces.algorithms.management.ClusterVmsBalancingOrientedBySimilarity;
+import br.com.autonomiccs.cloudTraces.algorithms.management.ClusterVMsBalancingByRAMusage;
 import br.com.autonomiccs.cloudTraces.beans.Cloud;
 import br.com.autonomiccs.cloudTraces.beans.Cluster;
 import br.com.autonomiccs.cloudTraces.beans.GoogleJob;
@@ -79,16 +80,17 @@ public class CloudTracesSimulator {
     private static String algorithmName;
 
     public static void main(String[] args) {
-        validateInputFile(args);
+        //validateInputFile(args);
 
-        String cloudTracesFile = args[0];
+        String cloudTracesFile = "cloudVmTraces.csv";
 
+    /**
         try {
             algorithmName = args[1];
         } catch (ArrayIndexOutOfBoundsException e) {
             algorithmName = "";
         }
-
+	*/
         Collection<VirtualMachine> virtualMachines = getAllVirtualMachinesFromCloudTraces(cloudTracesFile);
         logger.info(String.format("#VirtualMachines [%d] found on [%s].", virtualMachines.size(), cloudTracesFile));
 
@@ -235,15 +237,9 @@ public class CloudTracesSimulator {
     }
 
     private static ClusterAdministrationAlgorithmEmptyImpl getClusterAdministrationAlgorithms() {
-        if (algorithmName.isEmpty()) {
-            return new ClusterVmsBalancingOrientedBySimilarity();
-        } else {
-            if (algorithmName.equals("empty")) {
-                return new ClusterAdministrationAlgorithmEmptyImpl();
-            } else {
-                return new ClusterVmsBalancingOrientedBySimilarity();
-            }
-        }
+        //Alterar aqui
+    	return new ClusterVMsBalancingByRAMusage();
+    	//return new ClusterVmsBalancingOrientedBySimilarity();
     }
 
     private static void updateCloudResourceUsageForTime(Cloud cloud, double currentTime) {
@@ -683,6 +679,7 @@ public class CloudTracesSimulator {
         return vmServiceOffering;
     }
 
+/**
     private static void validateInputFile(String[] args) {
         File file = new File(args[0]);
         if (!file.exists()) {
@@ -692,5 +689,5 @@ public class CloudTracesSimulator {
             throw new GoogleTracesToCloudTracesException(String.format("Cannot read file [%s] .", args[0]));
         }
     }
-
+*/
 }
