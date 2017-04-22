@@ -16,7 +16,7 @@ import br.com.autonomiccs.cloudTraces.beans.VirtualMachineComparator;
 
 public class ClusterVMsBalancingByRAMusage extends ClusterAdministrationAlgorithmEmptyImpl {
 	
-	private long totalClusterRAM; 				//In MB
+	private double totalClusterRAM; 				//In MB
 	protected long clusterRAMusageAverage = 0;	//In MB
 	protected int numberOfVms = 0;
 	
@@ -40,43 +40,34 @@ public class ClusterVMsBalancingByRAMusage extends ClusterAdministrationAlgorith
 		List<Host> hostsToBeBalanced = new ArrayList<>();
 		calculateTotalResources(rankedHosts);		//Get total cluster RAM, number of VMs, hosts and cluster's RAM average usage
 		
-		//Verifica os hosts que precisam ser balanceados e os adiciona numa lista hostsToBeBalanced
-		int numberOfHostsToBeBalanced = 0;
-		for (Host host : rankedHosts) {
-			logger.info(String.format("RAM usage of host [%s] [%.0f]", host.getId(), host.getMemoryUsedInMib()));
-		}
+		//for (Host host : rankedHosts) {logger.info(String.format("HOST: RAM usage of host [%s] [%.0f]", host.getId(), host.getMemoryUsedInMib()));}
 		
+		//Verifica os hosts que precisam ser balanceados e os adiciona numa lista hostsToBeBalanced
 		for (Host host : rankedHosts) {
-			if (((long) host.getMemoryUsedInMib()) > clusterRAMusageAverage) {
+			if (((long) host.getMemoryAllocatedInMib()) > clusterRAMusageAverage) {
 				hostsToBeBalanced.add(host);
-				numberOfHostsToBeBalanced++;
 			} else {
 				possibleTargets.add(host);
 			}
 		}
-		logger.info(String.format("number of hosts to be balanced before heuristic [%d]", numberOfHostsToBeBalanced));
+		
+		//logger.info(String.format("Number of hosts to be balanced before heuristic [%d]", hostsToBeBalanced.size()));
 
 		
 		//Caso tenha hosts para serem balanceados
 		if (hostsToBeBalanced.size() > 0) {
-			hostsToBeBalanced = sortHostsByRAMusageDecreasing(hostsToBeBalanced);	//Os primeiros estão mais sobrecarregados
+			hostsToBeBalanced = sortHostsByRAMusageDecreasing(hostsToBeBalanced);		//Os primeiros estão mais sobrecarregados
 			possibleTargets = sortHostsByRAMusageAscending(possibleTargets);			//Os primeiros são os menos sobrecarregados
 			
-			for (Host host : hostsToBeBalanced) {
-				logger.info(String.format("To be balanced: [%s] RAM usage [%.0f]", host.getId(), host.getMemoryUsedInMib()));
-			}
-			for (Host host : possibleTargets) {
-				logger.info(String.format("Possible target: [%s] ram usage [%.0f], allocated RAM [%.0f]", host.getId(), host.getMemoryUsedInMib(), (float)host.getTotalMemoryInMib()));
-			}
+			//for (Host host : hostsToBeBalanced) {logger.info(String.format("TO BE BALANCED: [%s] RAM usage [%.0f]", host.getId(), host.getMemoryUsedInMib()));}
+			//for (Host host : possibleTargets) {logger.info(String.format("POSSIBLE TARGET: [%s] ram usage [%.0f], allocated RAM [%.0f]", host.getId(), host.getMemoryUsedInMib(), (float)host.getTotalMemoryInMib()));}
 			
-			for (Host host : hostsToBeBalanced) {								//HostsComMigrações
+			for (Host host : hostsToBeBalanced) {									//Hosts sobrecarregados
 				Set<VirtualMachine> setVms = host.getVirtualMachines();
 				List<VirtualMachine> vms = new ArrayList<VirtualMachine>(setVms);	//vmsAtivas
 				vms = sortVMsByRAMallocatedAscending(vms);							//ordena vmsAtivas por alocação de RAM
 				
-				for (VirtualMachine virtualMachine : vms) {
-					logger.info(String.format("Virtual machine: [%s] allocated memory [%.0f]", virtualMachine.getVmId(), (float)virtualMachine.getVmServiceOffering().getMemoryInMegaByte()));
-				}
+				//for (VirtualMachine virtualMachine : vms) {logger.info(String.format("VIRTUAL MACHINE: [%s] allocated memory [%.0f]", virtualMachine.getVmId(), (float)virtualMachine.getVmServiceOffering().getMemoryInMegaByte()));}
 				
 				vmsMigration:
 				for (VirtualMachine vm : vms) {	
@@ -84,7 +75,7 @@ public class ClusterVMsBalancingByRAMusage extends ClusterAdministrationAlgorith
 					searchTarget:
 					for (Host targetHost : possibleTargets) {
 						if (!verifyPossibleOverload(targetHost, vm, clusterRAMusageAverage)) {	//Se o host não ficar acima da média, passar a VM para ele
-							logger.info(String.format("Host [%s] will receive vm [%s] from Host [%s]", targetHost.getId(), vm.getVmId(), host.getId()));
+							//logger.info(String.format("MIGRATION: Host [%s] will receive vm [%s] from Host [%s]", targetHost.getId(), vm.getVmId(), host.getId()));
 							mapOfMigrations.put(vm, targetHost);
 							break searchTarget;
 						}
@@ -103,66 +94,26 @@ public class ClusterVMsBalancingByRAMusage extends ClusterAdministrationAlgorith
     	return mapOfMigrations;
     }
 	
-
-    /*
-	public void balanceClusterByRAMusage(List<Host> hostsAtivos, long clusterRAMusageAverage){
-		List<Host> possibleTargets = new ArrayList<>();
-		List<Host> hostsToBeBalanced = new ArrayList<>();
-		
-		//Verifica os hosts que precisam ser balanceados e os adiciona numa lista hostsToBeBalanced
-		for (Host host : hostsAtivos) {
-			if (((long) host.getMemoryUsedInMib()) > clusterRAMusageAverage) {
-				hostsToBeBalanced.add(host);
-			} else {
-				possibleTargets.add(host);
-			}
-		}
-		
-		//Caso tenha hosts para serem balanceados
-		if (hostsToBeBalanced.size() > 0) {
-			hostsToBeBalanced = sortHostsByRAMusageDecreasing(hostsToBeBalanced);	//Os primeiros estão mais sobrecarregados
-			possibleTargets = sortHostsByRAMusageAscending(possibleTargets);			//Os primeiros são os menos sobrecarregados
-			
-			for (Host host : hostsToBeBalanced) {								//HostsComMigrações
-				Set<VirtualMachine> setVms = host.getVirtualMachines();
-				List<VirtualMachine> vms = new ArrayList<VirtualMachine>(setVms);	//vmsAtivas
-				vms = sortVMsByRAMallocatedAscending(vms);							//ordena vmsAtivas por alocação de RAM
-				
-				vmsMigration:
-				for (VirtualMachine vm : vms) {						
-					searchTarget:
-					for (Host targetHost : possibleTargets) {
-						if (!verifyPossibleOverload(targetHost, vm, clusterRAMusageAverage)) {
-							//migraVM
-							break searchTarget;
-						}
-					}
-					
-					if ((long) host.getMemoryUsedInMib() < clusterRAMusageAverage) {	//Não precisa mais migrar VMs pois já balanceou
-						break vmsMigration;
-					}
-				}
-			}
-		}
-		
-	}
-	*/
-
     void calculateClusterRAMaverageUsage(List<Host> activeHosts){
     	if (activeHosts.size() > 0) {
         	long totalUsage = 0;
         	long totalClusterMemory = 0;
+        	long allocatedClusterMemory = 0;
         	for (Host host : activeHosts) {
-    			//totalUsage += host.getMemoryUsedInMib();
         		totalUsage += host.getMemoryAllocatedInMib();
         		totalClusterMemory += host.getTotalMemoryInMib();
+        		allocatedClusterMemory += host.getMemoryUsedInMib();
     		}
         	
-        	clusterRAMusageAverage = totalUsage/totalClusterMemory;	
-        	logger.info(String.format("Cluster RAM usage average [%d]", clusterRAMusageAverage));
+        	clusterRAMusageAverage = allocatedClusterMemory/activeHosts.size();	
+        	
+        	//logger.info(String.format("CLUSTER: RAM allocated by hosts [%d]", totalUsage));
+        	//logger.info(String.format("CLUSTER: Total RAM [%d]", totalClusterMemory));
+        	//logger.info(String.format("CLUSTER: RAM usage average [%.02f]", (float)clusterRAMusageAverage));
+        	//logger.info(String.format("CLUSTER: RAM usage by hosts [%.02f]", (float)allocatedClusterMemory));
         	if (totalClusterRAM > 0) {
-        		float usageInPercentage = toPercentage(clusterRAMusageAverage, totalClusterRAM);
-        		logger.info(String.format("Cluster RAM usage average in percentage [%.2f]%%", usageInPercentage));
+        		double usageInPercentage = toPercentage(clusterRAMusageAverage, (long)totalClusterRAM);
+        		//logger.info(String.format("CLUSTER: RAM usage average in percentage [%.2f]%%", usageInPercentage));
 			}
         	
 		}
@@ -222,16 +173,18 @@ public class ClusterVMsBalancingByRAMusage extends ClusterAdministrationAlgorith
 	}
 	
 	private void calculateTotalResources(List<Host> hosts){
+		long totalClusterRAMaux = 0;
 		for (Host host : hosts) {
-			totalClusterRAM += host.getMemoryAllocatedInMib();
+			totalClusterRAMaux += host.getTotalMemoryInMib();
 			numberOfVms += host.getVirtualMachines().size();
 		}
-		logger.info(String.format("Total cluster RAM [%d], number of hosts [%s], number of VMs in cluster [%d]", totalClusterRAM, hosts.size(), numberOfVms));
+		totalClusterRAM = (double)totalClusterRAMaux;
+		//logger.info(String.format("CLUSTER: RAM capacity [%d], number of hosts [%s], number of VMs [%d]", totalClusterRAMaux, hosts.size(), numberOfVms));
 		calculateClusterRAMaverageUsage(hosts);
 	}
 	
-	private float toPercentage(long valueOne, long totalValue){
-		return ((float)valueOne/(float)totalValue)*100;
+	private double toPercentage(long valueOne, long totalValue){
+		return ((double)valueOne/(double)totalValue)*100;
 	}
 }
 

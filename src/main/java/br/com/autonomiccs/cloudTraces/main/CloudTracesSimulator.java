@@ -238,7 +238,8 @@ public class CloudTracesSimulator {
 
     private static ClusterAdministrationAlgorithmEmptyImpl getClusterAdministrationAlgorithms() {
         //Alterar aqui
-    	return new ClusterVMsBalancingByRAMusage();
+    	//return new ClusterVMsBalancingByRAMusage();
+    	return new ClusterAdministrationAlgorithmEmptyImpl();
     	//return new ClusterVmsBalancingOrientedBySimilarity();
     }
 

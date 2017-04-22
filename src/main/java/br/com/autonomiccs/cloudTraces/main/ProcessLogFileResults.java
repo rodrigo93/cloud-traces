@@ -66,7 +66,8 @@ public class ProcessLogFileResults {
 
         String logType;
         try {
-            logType = "bestResults";
+        	//Define qual tipo de log usar
+            logType = "allocatedLog";
         } catch (ArrayIndexOutOfBoundsException e) {
             logType = "";
         }
