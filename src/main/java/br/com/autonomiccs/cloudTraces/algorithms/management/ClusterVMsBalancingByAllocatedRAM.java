@@ -14,7 +14,7 @@ import br.com.autonomiccs.cloudTraces.beans.HostComparator;
 import br.com.autonomiccs.cloudTraces.beans.VirtualMachine;
 import br.com.autonomiccs.cloudTraces.beans.VirtualMachineComparator;
 
-public class ClusterVMsBalancingByRAMusage extends ClusterAdministrationAlgorithmEmptyImpl {
+public class ClusterVMsBalancingByAllocatedRAM extends ClusterAdministrationAlgorithmEmptyImpl {
 	
 	private double totalClusterRAM; 				//In MB
 	protected long clusterRAMallocatedAverage = 0;	//In MB
@@ -127,7 +127,7 @@ public class ClusterVMsBalancingByRAMusage extends ClusterAdministrationAlgorith
      * Calculate the allocated RAM average by hosts in the cluster.
      * @param activeHosts list of hosts in the cluster.
      */
-    void calculateClusterRAMaverageUsage(List<Host> activeHosts){
+    void calculateClusterAllcatedRAMaverage(List<Host> activeHosts){
     	if (activeHosts.size() > 0) {
 //        	long totalAllocatedRAM = 0;
 //        	long totalClusterMemory = 0;
@@ -217,7 +217,7 @@ public class ClusterVMsBalancingByRAMusage extends ClusterAdministrationAlgorith
 		}
 		totalClusterRAM = (double)totalClusterRAMaux;
 		//logger.info(String.format("CLUSTER: RAM capacity [%d], number of hosts [%s], number of VMs [%d]", totalClusterRAMaux, hosts.size(), numberOfVms));
-		calculateClusterRAMaverageUsage(hosts);
+		calculateClusterAllcatedRAMaverage(hosts);
 	}
 	
 	private double toPercentage(long valueOne, long totalValue){
